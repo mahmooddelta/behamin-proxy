@@ -12,10 +12,11 @@ use Illuminate\Support\Facades\Facade;
  * Class Proxy
  * @package Proxy
  *
+ * @method static Http clearExistingFakes()
  * @method static Factory fake($callback = null)
  * @method static Http accept(string $contentType)
  * @method static Http acceptJson()
- * @method static Http mock(string $jsonPath)
+ * @method static Http mock(mixed $jsonPath)
  * @method static Http asForm()
  * @method static Http asJson()
  * @method static Http asMultipart()
@@ -41,6 +42,7 @@ use Illuminate\Support\Facades\Facade;
  * @method static Http withToken(string $token, string $type = 'Bearer')
  * @method static Http withUserAgent(string $userAgent)
  * @method static Http withoutRedirecting()
+ * @method static Http domain(string $domain)
  * @method static Http withoutVerifying()
  * @method static array pool(callable $callback)
  * @method static ProxyResponse request(Request $request, string $service)

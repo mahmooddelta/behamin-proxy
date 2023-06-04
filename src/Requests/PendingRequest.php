@@ -12,6 +12,7 @@ use GuzzleHttp\Promise\PromiseInterface;
 use Illuminate\Http\Client\PendingRequest as HttpPendingRequest;
 use Illuminate\Http\Client\Response;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http as HttpFactory;
 use Illuminate\Support\Str;
 use Psr\Http\Message\MessageInterface;
 use Symfony\Component\HttpKernel\Exception\NotAcceptableHttpException;
@@ -20,9 +21,18 @@ class PendingRequest extends HttpPendingRequest
 {
     private string $service = '';
 
+    private ?string $domain = null;
+
     public function __construct($factory = null)
     {
         parent::__construct($factory);
+    }
+
+    public function domain(string $domain): PendingRequest
+    {
+        $this->domain = $domain;
+
+        return $this;
     }
 
     public function request(Request $request, string $service): ProxyResponse
@@ -74,7 +84,7 @@ class PendingRequest extends HttpPendingRequest
         return $this->respond($url, $data, Request::METHOD_PATCH);
     }
 
-    public function post(string $url, array $data = [])
+    public function post(string $url, $data = [])
     {
         return $this->respond($url, $data, Request::METHOD_POST);
     }
@@ -109,7 +119,8 @@ class PendingRequest extends HttpPendingRequest
      */
     private function fullUrl(?string $path): string
     {
-        $baseUrl = UrlGenerator::baseUrl();
+        $baseUrl = UrlGenerator::baseUrl($this->domain);
+
         $servicePath = $this->service;
 
         if (Str::endsWith($baseUrl, '/')) {
@@ -131,8 +142,13 @@ class PendingRequest extends HttpPendingRequest
 
     private function respond($url, $data, $method)
     {
-        if (app()->runningUnitTests() && $this->factory instanceof Http && $this->factory->getMockPath()) {
-            $result = Mock::fakeResponse($this->factory->getMockPath());
+        if ($this->factory->isSetMocking() && $this->isHttpRequestMethod($method)) {
+            $this->factory->mock([$url => $this->factory->getMockPath()]);
+        }
+
+        if (app()->runningUnitTests() && $this->factory instanceof Http && $this->factory->hasFake($url)) {
+            /** Http will remove / from start url */
+            $result = HttpFactory::$method($url);
         } else {
             $this->prepare();
             $method = Str::lower($method);
@@ -144,5 +160,10 @@ class PendingRequest extends HttpPendingRequest
         }
 
         return new ProxyResponse($result);
+    }
+
+    private function isHttpRequestMethod($method): bool
+    {
+        return in_array(Str::lower($method), ['post', 'get', 'head', 'delete', 'put', 'patch']);
     }
 }
